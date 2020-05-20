@@ -10,7 +10,7 @@ import abc
 import numpy as np
 
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.externals.joblib import Memory
+from joblib import Memory
 
 from .. import masking
 from .. import image
@@ -18,15 +18,15 @@ from .. import signal
 from .. import _utils
 from .._utils.cache_mixin import CacheMixin, cache
 from .._utils.class_inspect import enclosing_scope_name
-from .._utils.compat import _basestring
 
 
 def filter_and_extract(imgs, extraction_function,
                        parameters,
-                       memory_level=0, memory=Memory(cachedir=None),
+                       memory_level=0, memory=Memory(location=None),
                        verbose=0,
                        confounds=None,
-                       copy=True):
+                       copy=True,
+                       dtype=None):
     """Extract representative time series using given function.
 
     Parameters
@@ -56,14 +56,15 @@ def filter_and_extract(imgs, extraction_function,
 
     # If we have a string (filename), we won't need to copy, as
     # there will be no side effect
-    if isinstance(imgs, _basestring):
+    if isinstance(imgs, str):
         copy = False
 
     if verbose > 0:
         print("[%s] Loading data from %s" % (
             class_name,
             _utils._repr_niimgs(imgs)[:200]))
-    imgs = _utils.check_niimg(imgs, atleast_4d=True, ensure_ndim=4)
+    imgs = _utils.check_niimg(imgs, atleast_4d=True, ensure_ndim=4,
+                              dtype=dtype)
 
     sample_mask = parameters.get('sample_mask')
     if sample_mask is not None:
@@ -103,7 +104,6 @@ def filter_and_extract(imgs, extraction_function,
     # Filtering
     # Confounds removing (from csv file or numpy array)
     # Normalizing
-
     if verbose > 0:
         print("[%s] Cleaning extracted signals" % class_name)
     sessions = parameters.get('sessions')

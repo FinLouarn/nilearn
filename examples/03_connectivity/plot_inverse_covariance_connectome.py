@@ -7,7 +7,7 @@ covariance.
 
 We use the `MSDL atlas
 <https://team.inria.fr/parietal/18-2/spatial_patterns/spatial-patterns-in-resting-state/>`_
-of functional regions in rest, and the
+of functional regions in movie watching, and the
 :class:`nilearn.input_data.NiftiMapsMasker` to extract time series.
 
 Note that the inverse covariance (or precision) contains values that can
@@ -32,7 +32,7 @@ atlas_filename = atlas['maps']
 labels = atlas['labels']
 
 # Loading the functional datasets
-data = datasets.fetch_adhd(n_subjects=1)
+data = datasets.fetch_development_fmri(n_subjects=1)
 
 # print basic information on the dataset
 print('First subject functional nifti images (4D) are at: %s' %
@@ -51,9 +51,13 @@ time_series = masker.fit_transform(data.func[0],
 ##############################################################################
 # Compute the sparse inverse covariance
 # --------------------------------------
-from sklearn.covariance import GraphLassoCV
-estimator = GraphLassoCV()
+try:
+    from sklearn.covariance import GraphicalLassoCV
+except ImportError:
+    # for Scitkit-Learn < v0.20.0
+    from sklearn.covariance import GraphLassoCV as GraphicalLassoCV
 
+estimator = GraphicalLassoCV()
 estimator.fit(time_series)
 
 ##############################################################################
@@ -91,3 +95,24 @@ plotting.plot_connectome(-estimator.precision_, coords,
                          title='Sparse inverse covariance')
 
 plotting.show()
+
+##############################################################################
+# 3D visualization in a web browser
+# ---------------------------------
+# An alternative to :func:`nilearn.plotting.plot_connectome` is to use
+# :func:`nilearn.plotting.view_connectome` that gives more interactive
+# visualizations in a web browser. See :ref:`interactive-connectome-plotting`
+# for more details.
+
+
+view = plotting.view_connectome(-estimator.precision_, coords)
+
+# In a Jupyter notebook, if ``view`` is the output of a cell, it will
+# be displayed below the cell
+view
+
+##############################################################################
+
+# uncomment this to open the plot in a web browser:
+# view.open_in_browser()
+

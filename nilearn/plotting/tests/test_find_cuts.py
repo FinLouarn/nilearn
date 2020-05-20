@@ -1,9 +1,11 @@
 import numpy as np
-from nose.tools import assert_equal, assert_true
 import nibabel
+import pytest
+
 from nilearn.plotting.find_cuts import (find_xyz_cut_coords, find_cut_slices,
-                                        _transform_cut_coords)
-from nilearn._utils.testing import assert_raises_regex, assert_warns
+                                        _transform_cut_coords,
+                                        find_parcellation_cut_coords,
+                                        find_probabilistic_atlas_cut_coords)
 from nilearn.masking import compute_epi_mask
 
 
@@ -55,7 +57,16 @@ def test_find_cut_coords():
     affine = np.eye(4)
     img_3d = nibabel.Nifti1Image(data_3d, affine)
     img_4d = nibabel.Nifti1Image(data_4d, affine)
-    assert_equal(find_xyz_cut_coords(img_3d), find_xyz_cut_coords(img_4d))
+    assert find_xyz_cut_coords(img_3d) == find_xyz_cut_coords(img_4d)
+
+    # test passing empty image returns coordinates pointing to AC-PC line
+    data = np.zeros((20, 30, 40))
+    affine = np.eye(4)
+    img = nibabel.Nifti1Image(data, affine)
+    cut_coords = find_xyz_cut_coords(img)
+    assert cut_coords == [0.0, 0.0, 0.0]
+    with pytest.warns(UserWarning):
+        cut_coords = find_xyz_cut_coords(img)
 
 
 def test_find_cut_slices():
@@ -68,10 +79,10 @@ def test_find_cut_slices():
             cuts = find_cut_slices(img, direction=direction,
                                    n_cuts=n_cuts, spacing=2)
             # Test that we are indeed getting the right number of cuts
-            assert_equal(len(cuts), n_cuts)
+            assert len(cuts) == n_cuts
             # Test that we are not getting cuts that are separated by
             # less than the minimum spacing that we asked for
-            assert_equal(np.diff(cuts).min(), 2)
+            assert np.diff(cuts).min() == 2
             # Test that the cuts indeed go through the 'activated' part
             # of the data
             for cut in cuts:
@@ -79,7 +90,7 @@ def test_find_cut_slices():
                     cut_value = data[int(cut)]
                 elif direction == 'z':
                     cut_value = data[..., int(cut)]
-                assert_equal(cut_value.max(), 1)
+                assert cut_value.max() == 1
 
     # Now ask more cuts than it is possible to have with a given spacing
     n_cuts = 15
@@ -87,6 +98,30 @@ def test_find_cut_slices():
         # Only a smoke test
         cuts = find_cut_slices(img, direction=direction,
                                n_cuts=n_cuts, spacing=2)
+
+    # non-diagonal affines
+    affine = np.array([[-1., 0., 0., 123.46980286],
+                       [0., 0., 1., -94.11079407],
+                       [0., -1., 0., 160.694],
+                       [0., 0., 0., 1.]])
+    img = nibabel.Nifti1Image(data, affine)
+    cuts = find_cut_slices(img, direction='z')
+    assert np.diff(cuts).min() != 0.
+    affine = np.array([[-2., 0., 0., 123.46980286],
+                       [0., 0., 2., -94.11079407],
+                       [0., -2., 0., 160.694],
+                       [0., 0., 0., 1.]])
+    img = nibabel.Nifti1Image(data, affine)
+    cuts = find_cut_slices(img, direction='z')
+    assert np.diff(cuts).min() != 0.
+    # Rotate it slightly
+    angle = np.pi / 180 * 15
+    rotation_matrix = np.array([[np.cos(angle), -np.sin(angle)],
+                                [np.sin(angle), np.cos(angle)]])
+    affine[:2, :2] = rotation_matrix * 2.0
+    img = nibabel.Nifti1Image(data, affine)
+    cuts = find_cut_slices(img, direction='z')
+    assert np.diff(cuts).min() != 0.
 
 
 def test_validity_of_ncuts_error_in_find_cut_slices():
@@ -100,10 +135,8 @@ def test_validity_of_ncuts_error_in_find_cut_slices():
         message = ("Image has %d slices in direction %s. Therefore, the number "
                    "of cuts must be between 1 and %d. You provided n_cuts=%s " % (
                        data.shape[0], direction, data.shape[0], n_cuts))
-        assert_raises_regex(ValueError,
-                            message,
-                            find_cut_slices,
-                            img, n_cuts=n_cuts)
+        with pytest.raises(ValueError, match=message):
+            find_cut_slices(img, n_cuts=n_cuts)
 
 
 def test_passing_of_ncuts_in_find_cut_slices():
@@ -132,22 +165,22 @@ def test_tranform_cut_coords():
 
     # test that when n_cuts is 1 we do get an iterable
     for direction in 'xyz':
-        assert_true(hasattr(_transform_cut_coords([4], direction, affine),
-                            "__iter__"))
+        assert hasattr(_transform_cut_coords([4], direction, affine),
+                            "__iter__")
 
     # test that n_cuts after as before function call
     n_cuts = 5
     cut_coords = np.arange(n_cuts)
     for direction in 'xyz':
-        assert_equal(len(_transform_cut_coords(cut_coords, direction, affine)),
+        assert (len(_transform_cut_coords(cut_coords, direction, affine)) ==
                      n_cuts)
 
 
 def test_find_cuts_empty_mask_no_crash():
     img = nibabel.Nifti1Image(np.ones((2, 2, 2)), np.eye(4))
     mask_img = compute_epi_mask(img)
-    cut_coords = assert_warns(UserWarning, find_xyz_cut_coords, img,
-                              mask_img=mask_img)
+    with pytest.warns(UserWarning):
+        cut_coords = find_xyz_cut_coords(img, mask_img=mask_img)
     np.testing.assert_array_equal(cut_coords, [.5, .5, .5])
 
 
@@ -155,4 +188,109 @@ def test_fast_abs_percentile_no_index_error_find_cuts():
     # check that find_cuts functions are safe
     data = np.array([[[1., 2.], [3., 4.]], [[0., 0.], [0., 0.]]])
     img = nibabel.Nifti1Image(data, np.eye(4))
-    assert_equal(len(find_xyz_cut_coords(img)), 3)
+    assert len(find_xyz_cut_coords(img)) == 3
+
+
+def test_find_parcellation_cut_coords():
+    data = np.zeros((100, 100, 100))
+    x_map_a, y_map_a, z_map_a = (10, 10, 10)
+    x_map_b, y_map_b, z_map_b = (30, 30, 30)
+    x_map_c, y_map_c, z_map_c = (50, 50, 50)
+    # Defining 3 parcellations
+    data[x_map_a - 10:x_map_a + 10, y_map_a - 10:y_map_a + 10, z_map_a - 10: z_map_a + 10] = 1
+    data[x_map_b - 10:x_map_b + 10, y_map_b - 10:y_map_b + 10, z_map_b - 10: z_map_b + 10] = 2
+    data[x_map_c - 10:x_map_c + 10, y_map_c - 10:y_map_c + 10, z_map_c - 10: z_map_c + 10] = 3
+
+    # Number of labels
+    labels = np.unique(data)
+    labels = labels[labels != 0]
+    n_labels = len(labels)
+
+    # identity affine
+    affine = np.eye(4)
+    img = nibabel.Nifti1Image(data, affine)
+    # find coordinates with return label names is True
+    coords, labels_list = find_parcellation_cut_coords(img,
+                                                       return_label_names=True)
+    # Check outputs
+    assert (n_labels, 3) == coords.shape
+    # number of labels in data should equal number of labels list returned
+    assert n_labels == len(labels_list)
+    # Labels numbered should match the numbers in returned labels list
+    assert list(labels) == labels_list
+
+    # Match with the number of non-overlapping labels
+    np.testing.assert_allclose((coords[0][0], coords[0][1], coords[0][2]),
+                               (x_map_a, y_map_a, z_map_a), rtol=6e-2)
+    np.testing.assert_allclose((coords[1][0], coords[1][1], coords[1][2]),
+                               (x_map_b, y_map_b, z_map_b), rtol=6e-2)
+    np.testing.assert_allclose((coords[2][0], coords[2][1], coords[2][2]),
+                               (x_map_c, y_map_c, z_map_c), rtol=6e-2)
+
+    # non-trivial affine
+    affine = np.diag([1 / 2., 1 / 3., 1 / 4., 1.])
+    img = nibabel.Nifti1Image(data, affine)
+    coords = find_parcellation_cut_coords(img)
+    assert (n_labels, 3) == coords.shape
+    np.testing.assert_allclose((coords[0][0], coords[0][1], coords[0][2]),
+                               (x_map_a / 2., y_map_a / 3., z_map_a / 4.),
+                               rtol=6e-2)
+    np.testing.assert_allclose((coords[1][0], coords[1][1], coords[1][2]),
+                               (x_map_b / 2., y_map_b / 3., z_map_b / 4.),
+                               rtol=6e-2)
+    np.testing.assert_allclose((coords[2][0], coords[2][1], coords[2][2]),
+                               (x_map_c / 2., y_map_c / 3., z_map_c / 4.),
+                               rtol=6e-2)
+    # test raises an error with wrong label_hemisphere name with 'lft'
+    error_msg = ("Invalid label_hemisphere name:lft. Should be one of "
+                 "these 'left' or 'right'.")
+    with pytest.raises(ValueError, match=error_msg):
+        find_parcellation_cut_coords(labels_img=img, label_hemisphere='lft')
+
+
+def test_find_probabilistic_atlas_cut_coords():
+    # make data
+    arr1 = np.zeros((100, 100, 100))
+    x_map_a, y_map_a, z_map_a = 30, 40, 50
+    arr1[x_map_a - 10:x_map_a + 10, y_map_a - 20:y_map_a + 20, z_map_a - 30: z_map_a + 30] = 1
+
+    arr2 = np.zeros((100, 100, 100))
+    x_map_b, y_map_b, z_map_b = 40, 50, 60
+    arr2[x_map_b - 10:x_map_b + 10, y_map_b - 20:y_map_b + 20, z_map_b - 30: z_map_b + 30] = 1
+
+    # make data with empty in between non-empty maps to make sure that
+    # code does not crash
+    arr3 = np.zeros((100, 100, 100))
+
+    data = np.concatenate((arr1[..., np.newaxis], arr3[..., np.newaxis],
+                           arr2[..., np.newaxis]), axis=3)
+
+    # Number of maps in time dimension
+    n_maps = data.shape[-1]
+
+    # run test on img with identity affine
+    affine = np.eye(4)
+    img = nibabel.Nifti1Image(data, affine)
+    coords = find_probabilistic_atlas_cut_coords(img)
+
+    # Check outputs
+    assert (n_maps, 3) == coords.shape
+
+    np.testing.assert_allclose((coords[0][0], coords[0][1], coords[0][2]),
+                               (x_map_a, y_map_a, z_map_a), rtol=6e-2)
+    np.testing.assert_allclose((coords[2][0], coords[2][1], coords[2][2]),
+                               (x_map_b - 0.5, y_map_b - 0.5, z_map_b - 0.5),
+                               rtol=6e-2)
+
+    # non-trivial affine
+    affine = np.diag([1 / 2., 1 / 3., 1 / 4., 1.])
+    img = nibabel.Nifti1Image(data, affine)
+    coords = find_probabilistic_atlas_cut_coords(img)
+    # Check outputs
+    assert (n_maps, 3) == coords.shape
+    np.testing.assert_allclose((coords[0][0], coords[0][1], coords[0][2]),
+                               (x_map_a / 2., y_map_a / 3., z_map_a / 4.),
+                               rtol=6e-2)
+    np.testing.assert_allclose((coords[2][0], coords[2][1], coords[2][2]),
+                               (x_map_b / 2., y_map_b / 3., z_map_b / 4.),
+                               rtol=6e-2)

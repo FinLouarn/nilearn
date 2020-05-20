@@ -7,6 +7,9 @@ import nibabel
 import numpy as np
 
 from nilearn.plotting.displays import OrthoSlicer, XSlicer, OrthoProjector
+from nilearn.plotting.displays import TiledSlicer
+from nilearn.plotting.displays import LZRYProjector
+from nilearn.plotting.displays import LYRZProjector
 from nilearn.datasets import load_mni152_template
 
 ##############################################################################
@@ -21,11 +24,29 @@ def test_demo_ortho_slicer():
     oslicer.close()
 
 
+def test_demo_tiled_slicer():
+    tslicer = TiledSlicer(cut_coords=(0, 0, 0))
+    img = load_mni152_template()
+    tslicer.add_overlay(img, cmap=plt.cm.gray)
+    tslicer.close()
+
+
 def test_stacked_slicer():
     # Test stacked slicers, like the XSlicer
     img = load_mni152_template()
     slicer = XSlicer.init_with_figure(img=img, cut_coords=3)
     slicer.add_overlay(img, cmap=plt.cm.gray)
+    # Forcing a layout here, to test the locator code
+    with tempfile.TemporaryFile() as fp:
+        slicer.savefig(fp)
+    slicer.close()
+
+
+def test_tiled_slicer():
+    img = load_mni152_template()
+    slicer = TiledSlicer.init_with_figure(img=img, cut_coords=(0, 0, 0),
+                                          colorbar=True)
+    slicer.add_overlay(img, cmap=plt.cm.gray, colorbar=True)
     # Forcing a layout here, to test the locator code
     with tempfile.TemporaryFile() as fp:
         slicer.savefig(fp)
@@ -65,6 +86,7 @@ def test_contour_fillings_levels_in_add_contours():
     # without passing levels, should work with default levels from
     # matplotlib
     oslicer.add_contours(img, filled=True)
+    oslicer.close()
 
 
 def test_user_given_cmap_with_colorbar():
@@ -92,6 +114,10 @@ def test_data_complete_mask():
     oslicer.add_overlay(img)
     oslicer.close()
 
+    lyrz_projector = LYRZProjector(cut_coords=(0, 0, 0, 0))
+    lyrz_projector.add_overlay(img)
+    lyrz_projector.close()
+
 
 def test_add_markers_cut_coords_is_none():
     # A special case test for add_markers when cut_coords are None. This
@@ -99,3 +125,28 @@ def test_add_markers_cut_coords_is_none():
     orthoslicer = OrthoSlicer(cut_coords=(None, None, None))
     orthoslicer.add_markers([(0, 0, 2)])
     orthoslicer.close()
+
+
+def test_annotations():
+    # Check calls to display.annotate()
+    # In particular, exercise some of the keyword arguments for scale bars
+    orthoslicer = OrthoSlicer(cut_coords=(None, None, None))
+    orthoslicer.annotate(size=10, left_right=True, positions=False)
+    orthoslicer.annotate(size=12, left_right=False, positions=False,
+                         scalebar=True,
+                         scale_size=2.5,
+                         scale_units='cm',
+                         scale_loc=3)
+    orthoslicer.close()
+
+
+def test_add_graph_with_node_color_as_string():
+    lzry_projector = LZRYProjector(cut_coords=(0, 0, 0, 0))
+    matrix = np.array([[0, 3], [3, 0]])
+    node_coords = [[-53.60, -62.80, 36.64], [23.87, 0.31, 69.42]]
+    # node_color as string
+    lzry_projector.add_graph(matrix, node_coords, node_color='red')
+    lzry_projector.close()
+    # node_color as sequence of string
+    lzry_projector.add_graph(matrix, node_coords, node_color=['red', 'blue'])
+    lzry_projector.close()

@@ -11,7 +11,8 @@ import matplotlib.pyplot as plt
 
 
 # Generate synthetic data
-from nilearn._utils.testing import generate_group_sparse_gaussian_graphs
+from nilearn._utils.data_gen import generate_group_sparse_gaussian_graphs
+from nilearn.plotting import show
 
 n_subjects = 20  # number of subjects
 n_displayed = 3  # number of subjects displayed
@@ -48,8 +49,13 @@ for n in range(n_displayed):
 
 
 # Fit one graph lasso per subject
-from sklearn.covariance import GraphLassoCV
-gl = GraphLassoCV(verbose=1)
+try:
+    from sklearn.covariance import GraphicalLassoCV
+except ImportError:
+    # for Scitkit-Learn < v0.20.0
+    from sklearn.covariance import GraphLassoCV as GraphicalLassoCV
+
+gl = GraphicalLassoCV(verbose=1)
 
 for n, subject in enumerate(subjects[:n_displayed]):
     gl.fit(subject)
@@ -73,4 +79,4 @@ plotting.plot_matrix(gl.precision_, axes=ax, vmin=-max_precision,
                      vmax=max_precision, colorbar=False)
 plt.title("graph lasso, all subjects\n$\\alpha=%.2f$" % gl.alpha_)
 
-plt.show()
+show()

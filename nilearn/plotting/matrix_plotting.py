@@ -28,7 +28,7 @@ def fit_axes(ax):
 
 def plot_matrix(mat, title=None, labels=None, figure=None, axes=None,
                 colorbar=True, cmap=plt.cm.RdBu_r, tri='full',
-                auto_fit=True, grid=False, **kwargs):
+                auto_fit=True, grid=False, reorder=False, **kwargs):
     """ Plot the given matrix.
 
         Parameters
@@ -37,8 +37,10 @@ def plot_matrix(mat, title=None, labels=None, figure=None, axes=None,
             Matrix to be plotted.
         title : string or None, optional
             A text to add in the upper left corner.
-        labels : list of strings, optional
-            The label of each row and column
+        labels : list, ndarray of strings, empty list, False, or None, optional
+            The label of each row and column. Needs to be the same
+            length as rows/columns of mat. If False, None, or an
+            empty list, no labels are plotted.
         figure : figure instance, figsize tuple, or None
             Sets the figure used. This argument can be either an existing
             figure, or a pair (width, height) that gives the size of a
@@ -62,11 +64,56 @@ def plot_matrix(mat, title=None, labels=None, figure=None, axes=None,
         grid : color or False, optional
             If not False, a grid is plotted to separate rows and columns
             using the given color.
+        reorder : boolean or {'single', 'complete', 'average'}, optional
+            If not False, reorders the matrix into blocks of clusters.
+            Accepted linkage options for the clustering are 'single',
+            'complete', and 'average'. True defaults to average linkage.
+
+            .. note::
+                This option is only available with SciPy >= 1.0.0.
+
+            .. versionadded:: 0.4.1
+
         kwargs : extra keyword arguments
             Extra keyword arguments are sent to pylab.imshow
 
-        Returns Matplotlib AxesImage instance
+        Returns
+        -------
+        display : instance of matplotlib
+            Axes image.
     """
+    # we need a list so an empty one will be cast to False
+    if isinstance(labels, np.ndarray):
+        labels = labels.tolist()
+    if labels and len(labels) != mat.shape[0]:
+        raise ValueError("Length of labels unequal to length of matrix.")
+
+    if reorder:
+        if not labels:
+            raise ValueError("Labels are needed to show the reordering.")
+        try:
+            from scipy.cluster.hierarchy import (linkage, optimal_leaf_ordering,
+                                                 leaves_list)
+        except ImportError:
+            raise ImportError("A scipy version of at least 1.0 is needed "
+                              "for ordering the matrix with "
+                              "optimal_leaf_ordering.")
+        valid_reorder_args = [True, 'single', 'complete', 'average']
+        if reorder not in valid_reorder_args:
+            raise ValueError("Parameter reorder needs to be "
+                             "one of {}.".format(valid_reorder_args))
+        if reorder is True:
+            reorder = 'average'
+        linkage_matrix = linkage(mat, method=reorder)
+        ordered_linkage = optimal_leaf_ordering(linkage_matrix, mat)
+        index = leaves_list(ordered_linkage)
+        # make sure labels is an ndarray and copy it
+        labels = np.array(labels).copy()
+        mat = mat.copy()
+        # and reorder labels and matrix
+        labels = labels[index].tolist()
+        mat = mat[index, :][:, index]
+
     if tri == 'lower':
         mask = np.tri(mat.shape[0], k=-1, dtype=np.bool) ^ True
         mat = np.ma.masked_array(mat, mask)
@@ -95,10 +142,10 @@ def plot_matrix(mat, title=None, labels=None, figure=None, axes=None,
                         cmap=cmap, **kwargs)
     axes.set_autoscale_on(False)
     ymin, ymax = axes.get_ylim()
-    if labels is False:
+    if not labels:
         axes.xaxis.set_major_formatter(plt.NullFormatter())
         axes.yaxis.set_major_formatter(plt.NullFormatter())
-    elif labels is not None:
+    else:
         axes.set_xticks(np.arange(len(labels)))
         axes.set_xticklabels(labels, size='x-small')
         for label in axes.get_xticklabels():
@@ -139,7 +186,7 @@ def plot_matrix(mat, title=None, labels=None, figure=None, axes=None,
     axes.set_ylim(ymin, ymax)
 
     if auto_fit:
-        if labels is not None and labels is not False:
+        if labels:
             fit_axes(axes)
         elif own_fig:
             plt.tight_layout(pad=.1,

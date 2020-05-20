@@ -21,7 +21,7 @@ nilearn version, required package versions, and utilities for checking
 # Dev branch marker is: 'X.Y.dev' or 'X.Y.devN' where N is an integer.
 # 'X.Y.dev0' is the canonical version of 'X.Y.dev'
 #
-__version__ = '0.4.0'
+__version__ = '0.7.0a'
 
 _NILEARN_INSTALL_MSG = 'See %s for installation information.' % (
     'http://nilearn.github.io/introduction.html#installation')
@@ -30,22 +30,31 @@ _NILEARN_INSTALL_MSG = 'See %s for installation information.' % (
 #   in some meaningful order (more => less 'core').
 REQUIRED_MODULE_METADATA = (
     ('numpy', {
-        'min_version': '1.6.1',
+        'min_version': '1.11',
         'required_at_installation': True,
         'install_info': _NILEARN_INSTALL_MSG}),
     ('scipy', {
-        'min_version': '0.14',
+        'min_version': '0.19',
         'required_at_installation': True,
         'install_info': _NILEARN_INSTALL_MSG}),
     ('sklearn', {
-        'min_version': '0.15',
+        'min_version': '0.19',
+        'required_at_installation': True,
+        'install_info': _NILEARN_INSTALL_MSG}),
+    ('joblib', {
+        'min_version': '0.12',
         'required_at_installation': True,
         'install_info': _NILEARN_INSTALL_MSG}),
     ('nibabel', {
         'min_version': '2.0.2',
-        'required_at_installation': False}))
+        'required_at_installation': False}),
+    ('pandas', {
+        'min_version': '0.18.0',
+        'required_at_installation': True,
+        'install_info': _NILEARN_INSTALL_MSG}),
+)
 
-OPTIONAL_MATPLOTLIB_MIN_VERSION = '1.1.1'
+OPTIONAL_MATPLOTLIB_MIN_VERSION = '2.0'
 
 
 def _import_module_with_version_check(

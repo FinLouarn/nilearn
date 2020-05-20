@@ -19,6 +19,9 @@ NeuroImage 2013
 
 This is just a code example, see the :ref:`corresponding section in the
 documentation <parcellation_time_series>` for more.
+
+.. note::
+    This example needs SciPy >= 1.0.0 for the reordering of the matrix.
 """
 
 ##############################################################################
@@ -33,8 +36,8 @@ labels = dataset.labels
 print('Atlas ROIs are located in nifti image (4D) at: %s' %
       atlas_filename)  # 4D data
 
-# One subject of resting-state data
-data = datasets.fetch_adhd(n_subjects=1)
+# One subject of brain development fmri data
+data = datasets.fetch_development_fmri(n_subjects=1)
 fmri_filenames = data.func[0]
 
 ##############################################################################
@@ -66,8 +69,9 @@ from nilearn import plotting
 np.fill_diagonal(correlation_matrix, 0)
 # The labels we have start with the background (0), hence we skip the
 # first label
+# matrices are ordered for block-like representation
 plotting.plot_matrix(correlation_matrix, figure=(10, 8), labels=labels[1:],
-                     vmax=0.8, vmin=-0.8)
+                     vmax=0.8, vmin=-0.8, reorder=True)
 
 ###############################################################################
 # Same thing without confounds, to stress the importance of confounds
@@ -82,6 +86,6 @@ correlation_matrix = correlation_measure.fit_transform([time_series])[0]
 np.fill_diagonal(correlation_matrix, 0)
 
 plotting.plot_matrix(correlation_matrix, figure=(10, 8), labels=labels[1:],
-                     vmax=0.8, vmin=-0.8, title='No confounds')
+                     vmax=0.8, vmin=-0.8, title='No confounds', reorder=True)
 
 plotting.show()

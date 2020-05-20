@@ -45,7 +45,7 @@ smooth_anat_img = image.smooth_img(MNI152_FILE_PATH, fwhm=3)
 
 # While we are giving a file name as input, the function returns
 # an in-memory object:
-print(smooth_anat_img)
+smooth_anat_img
 
 #########################################################################
 # This is an in-memory object. We can pass it to nilearn function, for
@@ -77,4 +77,3 @@ plotting.show()
 # To recap, all the nilearn tools can take data as filenames or in-memory
 # objects, and return brain volumes as in-memory objects. These can be
 # passed on to other nilearn tools, or saved to disk.
-

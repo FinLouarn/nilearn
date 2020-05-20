@@ -25,6 +25,7 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 from nilearn.surface import surface
+from nilearn.plotting import show
 
 
 ######################################################################
@@ -60,10 +61,9 @@ ball_sample_points = surface._ball_sample_locations(
 for sample_points in [line_sample_points, ball_sample_points]:
     fig = plt.figure()
     ax = plt.subplot(projection='3d')
-    ax.set_aspect(1)
 
     ax.plot_trisurf(x, y, z, triangles=triangulation.triangles)
 
     ax.scatter(*sample_points.T, color='r')
 
-plt.show()
+show()

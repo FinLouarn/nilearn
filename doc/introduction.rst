@@ -78,8 +78,8 @@ Why is machine learning relevant to NeuroImaging? A few examples!
 
     Data-driven exploration of brain images. This includes the extraction of
     the major brain networks from resting-state data ("resting-state networks")
-    as well as the discovery of connectionally coherent functional modules
-    ("connectivity-based parcellation").
+    or movie-watching data as well as the discovery of connectionally coherent
+    functional modules ("connectivity-based parcellation").
     For example,
     :ref:`extracting_rsn` or :ref:`parcellating_brain` with clustering.
 
@@ -149,35 +149,39 @@ using Python for science, see the `scipy lecture notes
 <http://scipy-lectures.github.io/>`_.
 
 
-We will be using `IPython <http://ipython.org>`_, which provides an
-interactive scientific environment that facilitates (e.g.,
-interactive debugging) and improves (e.g., printing of large matrices)
-many everyday data-manipulation steps. Start it by typing::
+We will be using `Jupyter <http://jupyter.org>`_ for notebooks, or
+`IPython <http://ipython.org>`_, which provides an interactive scientific
+environment that facilitates many everyday data-manipulation steps (e.g.
+interactive debugging, easy visualization). You can choose notebooks or
+terminal:
 
-    ipython --matplotlib
+:Notebooks:
 
-This will open an interactive prompt::
+    Start the Jupter notebook either with the application menu, or by
+    typing::
 
-    IPython ?.?.? -- An enhanced Interactive Python.
-    ?         -> Introduction and overview of IPython's features.
-    %quickref -> Quick reference.
-    help      -> Python's own help system.
-    object?   -> Details about 'object', use 'object??' for extra details.
+        jupyter notebook
+
+:Terminal:
+
+    Start ipython by typing::
+
+        ipython --matplotlib
+
+    .. note::
+
+        The ``--matplotlib`` flag, which configures matplotlib for
+        interactive use inside IPython.
+
+These will give you a *prompt* in which you can execute commands::
 
     In [1]: 1 + 2 * 3
     Out[1]: 7
 
-.. note::
-
-   The ``--matplotlib`` flag, which configures matplotlib for
-   interactive use inside IPython, is available for IPython versions
-   from 1.0 onwards. If you are using versions older than this,
-   e.g. 0.13, you can use the ``--pylab`` flag instead.
-
 .. topic:: `>>>` **Prompt**
 
    Below we'll be using `>>>` to indicate input lines. If you wish to copy and
-   paste these input lines directly into *IPython*, click on the `>>>` located
+   paste these input lines directly, click on the `>>>` located
    at the top right of the code block to toggle these prompt signs
 
 
@@ -256,14 +260,14 @@ To loop over each individual volume of a 4D image, use :func:`image.iter_img`::
    :class: green
 
    Want to sharpen your skills with nilearn?
-   Compute the mean EPI for first subject of the ADHD
-   dataset downloaded with :func:`nilearn.datasets.fetch_adhd` and
+   Compute the mean EPI for first subject of the brain development
+   dataset downloaded with :func:`nilearn.datasets.fetch_development_fmri` and
    smooth it with an FWHM varying from 0mm to 20mm in increments of 5mm
 
    **Hints:**
 
       * Inspect the '.keys()' of the object returned by
-        :func:`nilearn.datasets.fetch_adhd`
+        :func:`nilearn.datasets.fetch_development_fmri`
 
       * Look at the "reference" section of the documentation: there is a
         function to compute the mean of a 4D image
@@ -271,19 +275,21 @@ To loop over each individual volume of a 4D image, use :func:`image.iter_img`::
       * To perform a for loop in Python, you can use the "range" function
 
       * The solution can be found :ref:`here
-        <sphx_glr_auto_examples_04_manipulating_images_plot_smooth_mean_image.py>`
+        <sphx_glr_auto_examples_06_manipulating_images_plot_smooth_mean_image.py>`
 
 |
 
 
-.. topic:: **Warm up examples**
+.. topic:: **Tutorials to learn the basics**
 
-   The two following examples may be useful to get familiar with data
+   The two following tutorials may be useful to get familiar with data
    representation in nilearn:
 
    * :ref:`sphx_glr_auto_examples_plot_nilearn_101.py`
 
    * :ref:`sphx_glr_auto_examples_plot_3d_and_4d_niimg.py`
+
+   More tutorials can be found :ref:`here <tutorial_examples>`
 
 ____
 
@@ -397,11 +403,12 @@ estimator object, for instance an SVC (`support vector classifier
 <http://scikit-learn.org/stable/modules/svm.html>`_).
 It is first created with the relevant parameters::
 
+    >>> import sklearn; sklearn.set_config(print_changed_only=False)
     >>> from sklearn.svm import SVC
     >>> svc = SVC(kernel='linear', C=1.)
 
 These parameters are detailed in the documentation of
-the object: in IPython you can do::
+the object: in IPython or Jupter you can do::
 
     In [3]: SVC?
     ...
